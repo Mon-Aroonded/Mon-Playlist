@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mon Cher Playlist - คลังเพลงและ Setlist สำหรับแสดงสด</title>
+    <!-- Tailwind CSS v4 -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!-- Google Fonts: Plus Jakarta Sans & Prompt -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', 'Prompt', sans-serif; }
+        .glass-panel {
+            background: rgba(17, 24, 39, 0.75);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .glass-card {
+            background: rgba(31, 41, 55, 0.45);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            transition: all 0.25s ease;
+        }
+        .glass-card:hover {
+            border-color: rgba(245, 158, 11, 0.4);
+            transform: translateY(-2px);
+        }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #030712; }
+        ::-webkit-scrollbar-thumb { background: #1f2937; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #374151; }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen selection:bg-amber-500 selection:text-slate-950">
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+        
+        <!-- Header Section -->
+        <header class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 pb-6 border-b border-slate-800/80">
+            <div>
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-amber-300 flex items-center justify-center text-slate-950 font-bold text-xl shadow-lg shadow-amber-500/20">🎸</div>
+                    <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-white">Mon Cher Playlist</h1>
+                </div>
+                <p class="text-slate-400 text-sm mt-1">คลังเพลงและจัดการ Setlist สำหรับแสดงสดอย่างมืออาชีพ</p>
+            </div>
+            
+            <div class="flex items-center gap-3 w-full md:w-auto justify-end">
+                <button onclick="openSettingsModal()" class="glass-panel hover:bg-slate-800/80 text-slate-300 px-4 py-2.5 rounded-xl text-sm font-medium transition flex items-center gap-2 cursor-pointer">
+                    ⚙️ ตั้งค่าลิงก์ CSV
+                </button>
+                <button onclick="toggleSetlistDrawer()" class="relative bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold px-4 py-2.5 rounded-xl text-sm transition flex items-center gap-2 cursor-pointer shadow-lg shadow-amber-500/15">
+                    📋 Setlist ของฉัน
+                    <span id="setlistBadge" class="bg-slate-950 text-amber-400 text-xs px-2 py-0.5 rounded-full font-bold">0</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Filters & Search Toolbar -->
+        <div class="glass-panel p-4 sm:p-5 rounded-2xl mb-6 space-y-4 shadow-xl">
+            <div class="flex flex-col lg:flex-row gap-3">
+                <!-- Main Search -->
+                <div class="relative flex-1">
+                    <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">🔍</span>
+                    <input 
+                        type="text" 
+                        id="searchInput" 
+                        oninput="filterSongs()"
+                        placeholder="ค้นหาชื่อเพลง, ศิลปิน, คีย์, แนวเพลง หรือประวัติ..." 
+                        class="w-full bg-slate-900/80 border border-slate-800 rounded-xl pl-10 pr-4 py-3 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-500 transition"
+                    >
+                </div>
+
+                <!-- View Mode & Sort -->
+                <div class="flex items-center gap-2">
+                    <select id="sortSelect" onchange="filterSongs()" class="bg-slate-900/80 border border-slate-800 rounded-xl px-3 py-3 text-sm text-slate-300 focus:outline-none focus:border-amber-500 transition cursor-pointer">
+                        <option value="title-asc">เรียงตาม: ชื่อเพลง (ก-ฮ / A-Z)</option>
+                        <option value="artist-asc">เรียงตาม: ศิลปิน</option>
+                        <option value="year-desc">เรียงตาม: ปี (ใหม่ -> เก่า)</option>
+                        <option value="year-asc">เรียงตาม: ปี (เก่า -> ใหม่)</option>
+                    </select>
+
+                    <div class="flex bg-slate-900 border border-slate-800 rounded-xl p-1">
+                        <button id="cardViewBtn" onclick="switchView('card')" class="p-2 rounded-lg text-amber-400 bg-slate-800/80 transition cursor-pointer" title="Card View">📇</button>
+                        <button id="tableViewBtn" onclick="switchView('table')" class="p-2 rounded-lg text-slate-400 hover:text-slate-200 transition cursor-pointer" title="Table View">📊</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dropdown Filters -->
+            <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-2 border-t border-slate-800/60">
+                <select id="genreFilter" onchange="filterSongs()" class="bg-slate-900/60 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-slate-300 focus:outline-none focus:border-amber-500 transition cursor-pointer">
+                    <option value="">ทุกแนวเพลง (Genres)</option>
+                </select>
+                <select id="listFilter" onchange="filterSongs()" class="bg-slate-900/60 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-slate-300 focus:outline-none focus:border-amber-500 transition cursor-pointer">
+                    <option value="">ทุกหมวดหมู่ลิสต์ (In the list of)</option>
+                </select>
+                <select id="eraFilter" onchange="filterSongs()" class="bg-slate-900/60 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-slate-300 focus:outline-none focus:border-amber-500 transition cursor-pointer">
+                    <option value="">ทุกยุคสมัย (Eras)</option>
+                </select>
+                <select id="modeFilter" onchange="filterSongs()" class="bg-slate-900/60 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-slate-300 focus:outline-none focus:border-amber-500 transition cursor-pointer">
+                    <option value="all">เพลงทั้งหมดในคลัง</option>
+                    <option value="setlist">เฉพาะเพลงใน Setlist เท่านั้น</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Status & Stats Bar -->
+        <div class="flex justify-between items-center mb-4 px-1 text-xs text-slate-400">
+            <div id="statusInfo">กำลังโหลดข้อมูล...</div>
+            <div id="songCountBadge">แสดง 0 เพลง</div>
+        </div>
+
+        <!-- Main Content Container -->
+        <main>
+            <!-- Card View Container -->
+            <div id="cardContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+
+            <!-- Table View Container -->
+            <div id="tableContainer" class="hidden overflow-x-auto glass-panel rounded-2xl shadow-xl">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="border-b border-slate-800 text-xs text-slate-400 uppercase bg-slate-900/50">
+                            <th class="p-4 font-semibold">ชื่อเพลง</th>
+                            <th class="p-4 font-semibold">ศิลปิน / ผู้แต่ง</th>
+                            <th class="p-4 font-semibold">คีย์</th>
+                            <th class="p-4 font-semibold">แนวเพลง</th>
+                            <th class="p-4 font-semibold">ยุค / ปี</th>
+                            <th class="p-4 font-semibold">Tempo</th>
+                            <th class="p-4 font-semibold text-right">จัดการ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody" class="divide-y divide-slate-800/60 text-sm"></tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <!-- Setlist Drawer / Sidebar -->
+    <div id="setlistDrawer" class="fixed inset-0 z-50 overflow-hidden hidden">
+        <div class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm transition-opacity" onclick="toggleSetlistDrawer()"></div>
+        <div class="absolute inset-y-0 right-0 max-w-full flex pl-10">
+            <div class="w-screen max-w-md bg-slate-900 border-l border-slate-800 shadow-2xl flex flex-col">
+                <!-- Drawer Header -->
+                <div class="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-950/40">
+                    <div>
+                        <input type="text" id="setlistTitleInput" value="Live Gig Setlist" oninput="saveSetlistMeta()" class="bg-transparent font-bold text-lg text-white border-b border-transparent hover:border-slate-700 focus:border-amber-500 focus:outline-none px-1 py-0.5 transition w-full">
+                        <p class="text-xs text-slate-400 px-1 mt-0.5" id="setlistStats">0 เพลง • ประมาณ 0 นาที</p>
+                    </div>
+                    <button onclick="toggleSetlistDrawer()" class="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition cursor-pointer">✕</button>
+                </div>
+
+                <!-- Drawer Body (Items) -->
+                <div id="setlistItemsContainer" class="flex-1 overflow-y-auto p-4 space-y-2.5">
+                    <!-- Dynamic Items -->
+                </div>
+
+                <!-- Drawer Footer Actions -->
+                <div class="p-4 border-t border-slate-800 bg-slate-950/60 flex gap-2">
+                    <button onclick="exportSetlist()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-amber-400 font-semibold py-2.5 px-4 rounded-xl text-xs transition border border-slate-700 cursor-pointer flex items-center justify-center gap-1.5">
+                        📤 คัดลอกแชร์ Setlist
+                    </button>
+                    <button onclick="clearSetlist()" class="bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 font-semibold py-2.5 px-4 rounded-xl text-xs transition border border-rose-500/20 cursor-pointer">
+                        ล้างทั้งหมด
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Song Detail Modal -->
+    <div id="songModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
+        <div class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" onclick="closeSongModal()"></div>
+        <div class="relative glass-panel w-full max-w-2xl rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-700/60 overflow-hidden">
+            <div class="flex justify-between items-start gap-4 mb-6">
+                <div>
+                    <span id="modalGenreBadge" class="bg-amber-500/10 text-amber-400 border border-amber-500/20 text-xs px-2.5 py-1 rounded-full font-semibold">แนวเพลง</span>
+                    <h2 id="modalTitle" class="text-2xl sm:text-3xl font-bold text-white mt-2">ชื่อเพลง</h2>
+                    <p id="modalArtist" class="text-slate-400 text-sm mt-1">ศิลปิน / ผู้แต่ง</p>
+                </div>
+                <button onclick="closeSongModal()" class="w-9 h-9 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-full flex items-center justify-center transition cursor-pointer">✕</button>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+                <div class="bg-slate-900/80 border border-slate-800/80 p-3 rounded-2xl text-center">
+                    <span class="text-xs text-slate-500 block">Key Signature</span>
+                    <strong id="modalKey" class="text-amber-400 text-lg">C</strong>
+                </div>
+                <div class="bg-slate-900/80 border border-slate-800/80 p-3 rounded-2xl text-center">
+                    <span class="text-xs text-slate-500 block">Tempo</span>
+                    <strong id="modalBpm" class="text-slate-200 text-sm">120 BPM</strong>
+                </div>
+                <div class="bg-slate-900/80 border border-slate-800/80 p-3 rounded-2xl text-center">
+                    <span class="text-xs text-slate-500 block">ยุคสมัย (Era)</span>
+                    <strong id="modalEra" class="text-slate-200 text-sm">2010s</strong>
+                </div>
+                <div class="bg-slate-900/80 border border-slate-800/80 p-3 rounded-2xl text-center">
+                    <span class="text-xs text-slate-500 block">ภาษา</span>
+                    <strong id="modalLang" class="text-slate-200 text-sm">Thai</strong>
+                </div>
+            </div>
+
+            <div id="modalInfoContainer" class="mb-6 hidden">
+                <h4 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">ประวัติและข้อมูลเพลง</h4>
+                <p id="modalInfo" class="text-sm text-slate-300 bg-slate-900/60 p-4 rounded-2xl border border-slate-800 leading-relaxed italic"></p>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-3 pt-4 border-t border-slate-800">
+                <a id="modalChordBtn" href="#" target="_blank" class="flex-1 bg-slate-800 hover:bg-slate-700 text-amber-400 border border-slate-700 font-semibold py-3 px-4 rounded-xl text-sm transition text-center flex items-center justify-center gap-2 hidden">
+                    🎸 เปิดหน้าคอร์ด / โน้ตเพลงภายนอก (Busk.town)
+                </a>
+                <button id="modalSetlistBtn" class="flex-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold py-3 px-4 rounded-xl text-sm transition text-center cursor-pointer">
+                    + เพิ่มเข้า Setlist
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal (CSV URL) -->
+    <div id="settingsModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
+        <div class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" onclick="closeSettingsModal()"></div>
+        <div class="relative glass-panel w-full max-w-md rounded-3xl p-6 shadow-2xl border border-slate-700/60">
+            <h3 class="text-xl font-bold text-white mb-2">ตั้งค่าลิงก์ Google Sheet CSV</h3>
+            <p class="text-xs text-slate-400 mb-4">ใส่ลิงก์เผยแพร่ CSV จาก Google Sheet ของคุณเพื่อซิงค์ข้อมูลเพลงอัตโนมัติ</p>
+            
+            <input type="text" id="csvUrlInput" placeholder="https://docs.google.com/spreadsheets/d/.../pub?output=csv" class="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 focus:outline-none focus:border-amber-500 mb-4">
+            
+            <div class="flex gap-2">
+                <button onclick="saveCsvUrl()" class="flex-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold py-2.5 rounded-xl text-xs transition cursor-pointer">
+                    บันทึกและซิงค์ข้อมูล
+                </button>
+                <button onclick="closeSettingsModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold px-4 py-2.5 rounded-xl text-xs transition cursor-pointer">
+                    ยกเลิก
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        const DEFAULT_CSV_URL = 'https://docs.google.com/spreadsheets/d/19lyieJTUte1VWgiK-Hem8U9GtKZ_LyDcEDhxZGWap-M/pub?output=csv';
+        
+        let currentCsvUrl = localStorage.getItem('mon_cher_csv_url') || DEFAULT_CSV_URL;
+        let allSongs = [];
+        let setlist = JSON.parse(localStorage.getItem('mon_cher_setlist') || '[]');
+        let setlistTitle = localStorage.getItem('mon_cher_setlist_title') || 'Live Gig Setlist';
+        let currentView = 'card';
+
+        document.getElementById('setlistTitleInput').value = setlistTitle;
+
+        window.addEventListener('DOMContentLoaded', () => {
+            fetchSongsData();
+        });
+
+        async function fetchSongsData() {
+            const statusEl = document.getElementById('statusInfo');
+            statusEl.textContent = 'กำลังโหลดข้อมูลจาก Google Sheet...';
+            
+            try {
+                const response = await fetch(currentCsvUrl);
+                if (!response.ok) throw new Error('Network response was not ok');
+                const csvText = await response.text();
+                parseCSV(csvText);
+                statusEl.textContent = `ซิงค์ข้อมูลสำเร็จ (${allSongs.length} เพลง)`;
+                updateFiltersDropdowns();
+                filterSongs();
+                updateSetlistUI();
+            } catch (error) {
+                console.error(error);
+                statusEl.textContent = '⚠️ ไม่สามารถโหลดข้อมูลได้ กำลังใช้ข้อมูลสำรอง (Fallback)';
+                loadFallbackData();
+            }
+        }
+
+        function parseCSV(text) {
+            let lines = text.split('\n');
+            allSongs = [];
+
+            for (let i = 1; i < lines.length; i++) {
+                let line = lines[i].trim();
+                if (!line) continue;
+
+                let row = [];
+                let insideQuote = false;
+                let currentVal = '';
+
+                for (let char of line) {
+                    if (char === '"') {
+                        insideQuote = !insideQuote;
+                    } else if (char === ',' && !insideQuote) {
+                        row.push(currentVal.trim());
+                        currentVal = '';
+                    } else {
+                        currentVal += char;
+                    }
+                }
+                row.push(currentVal.trim());
+
+                if (row.length >= 2 && row[0]) {
+                    let yearStr = row[4] || '';
+                    let era = convertYearToEra(yearStr);
+
+                    allSongs.push({
+                        id: 'song_' + i,
+                        title: row[0],
+                        artist: row[1] || '-',
+                        key: row[2] || '-',
+                        language: row[3] || '',
+                        year: yearStr,
+                        era: era,
+                        genre: row[5] || 'General',
+                        inList: row[6] || '',
+                        tempo: row[7] || '-',
+                        info: row[8] || '',
+                        chordsLink: row[9] || ''
+                    });
+                }
+            }
+        }
+
+        function convertYearToEra(yearStr) {
+            if (!yearStr) return 'Other';
+            if (yearStr.toLowerCase().includes('s')) return yearStr;
+            let match = yearStr.match(/\d{4}/);
+            if (match) {
+                let yearNum = parseInt(match[0]);
+                let decade = Math.floor(yearNum / 10) * 10;
+                return decade + 's';
+            }
+            return yearStr;
+        }
+
+        function loadFallbackData() {
+            allSongs = [
+                { id: '1', title: 'ความลับ', artist: 'Project H', key: 'Bb', language: 'Thai', year: '1990s', era: '1990s', genre: 'Thai Pop', inList: 'Acoustic Set', tempo: '80 BPM', info: 'เพลงป๊อปยุค 90s สุดคลาสสิก', chordsLink: 'https://busk.town' },
+                { id: '2', title: 'คิดถึงเธอทุกที', artist: 'เจนนิเฟอร์ คิ้ม', key: 'E', language: 'Thai', year: '2000s', era: '2000s', genre: 'Thai Pop / Jazz', inList: 'Jazz Night', tempo: '75 BPM', info: 'เพลงแจ๊สฟังสบาย', chordsLink: 'https://busk.town' }
+            ];
+            updateFiltersDropdowns();
+            filterSongs();
+            updateSetlistUI();
+        }
+
+        function updateFiltersDropdowns() {
+            let genres = [...new Set(allSongs.map(s => s.genre).filter(Boolean))].sort();
+            let lists = [...new Set(allSongs.map(s => s.inList).filter(Boolean))].sort();
+            let eras = [...new Set(allSongs.map(s => s.era).filter(Boolean))].sort();
+
+            fillSelect('genreFilter', genres, 'ทุกแนวเพลง (Genres)');
+            fillSelect('listFilter', lists, 'ทุกหมวดหมู่ลิสต์ (In the list of)');
+            fillSelect('eraFilter', eras, 'ทุกยุคสมัย (Eras)');
+        }
+
+        function fillSelect(elementId, items, defaultText) {
+            let select = document.getElementById(elementId);
+            let currentVal = select.value;
+            select.innerHTML = `<option value="">${defaultText}</option>`;
+            items.forEach(item => {
+                let opt = document.createElement('option');
+                opt.value = item;
+                opt.textContent = item;
+                if (item === currentVal) opt.selected = true;
+                select.appendChild(opt);
+            });
+        }
+
+        function filterSongs() {
+            let keyword = document.getElementById('searchInput').value.toLowerCase();
+            let genreVal = document.getElementById('genreFilter').value;
+            let listVal = document.getElementById('listFilter').value;
+            let eraVal = document.getElementById('eraFilter').value;
+            let modeVal = document.getElementById('modeFilter').value;
+            let sortVal = document.getElementById('sortSelect').value;
+
+            let filtered = allSongs.filter(song => {
+                let matchKeyword = !keyword || 
+                    song.title.toLowerCase().includes(keyword) || 
+                    song.artist.toLowerCase().includes(keyword) || 
+                    song.key.toLowerCase().includes(keyword) || 
+                    song.genre.toLowerCase().includes(keyword) || 
+                    song.info.toLowerCase().includes(keyword);
+
+                let matchGenre = !genreVal || song.genre === genreVal;
+                let matchList = !listVal || song.inList === listVal;
+                let matchEra = !eraVal || song.era === eraVal;
+                let matchMode = modeVal === 'all' || setlist.includes(song.title);
+
+                return matchKeyword && matchGenre && matchList && matchEra && matchMode;
+            });
+
+            filtered.sort((a, b) => {
+                if (sortVal === 'title-asc') return a.title.localeCompare(b.title, 'th');
+                if (sortVal === 'artist-asc') return a.artist.localeCompare(b.artist, 'th');
+                if (sortVal === 'year-desc') return (b.year || '').localeCompare(a.year || '');
+                if (sortVal === 'year-asc') return (a.year || '').localeCompare(b.year || '');
+                return 0;
+            });
+
+            renderDisplay(filtered);
+        }
+
+        function switchView(view) {
+            currentView = view;
+            let cardBtn = document.getElementById('cardViewBtn');
+            let tableBtn = document.getElementById('tableViewBtn');
+            let cardCont = document.getElementById('cardContainer');
+            let tableCont = document.getElementById('tableContainer');
+
+            if (view === 'card') {
+                cardBtn.className = 'p-2 rounded-lg text-amber-400 bg-slate-800/80 transition cursor-pointer';
+                tableBtn.className = 'p-2 rounded-lg text-slate-400 hover:text-slate-200 transition cursor-pointer';
+                cardCont.classList.remove('hidden');
+                tableCont.classList.add('hidden');
+            } else {
+                tableBtn.className = 'p-2 rounded-lg text-amber-400 bg-slate-800/80 transition cursor-pointer';
+                cardBtn.className = 'p-2 rounded-lg text-slate-400 hover:text-slate-200 transition cursor-pointer';
+                tableCont.classList.remove('hidden');
+                cardCont.classList.add('hidden');
+            }
+            filterSongs();
+        }
+
+        function renderDisplay(songs) {
+            document.getElementById('songCountBadge').textContent = `แสดง ${songs.length} เพลง`;
+            renderCards(songs);
+            renderTable(songs);
+        }
+
+        function renderCards(songs) {
+            let container = document.getElementById('cardContainer');
+            container.innerHTML = '';
+
+            if (songs.length === 0) {
+                container.innerHTML = `<div class="col-span-full text-center py-12 text-slate-500">ไม่พบเพลงที่ตรงกับการค้นหา</div>`;
+                return;
+            }
+
+            songs.forEach(song => {
+                let inSetlist = setlist.includes(song.title);
+                let card = document.createElement('div');
+                card.className = 'glass-card rounded-2xl p-5 flex flex-col justify-between gap-4 relative overflow-hidden';
+                
+                card.innerHTML = `
+                    <div>
+                        <div class="flex justify-between items-start gap-2 mb-2">
+                            <span class="bg-amber-500/10 text-amber-400 border border-amber-500/20 text-xs px-2.5 py-0.5 rounded-full font-medium">Key: ${song.key}</span>
+                            <span class="text-xs text-slate-400 font-mono">${song.tempo || '-'}</span>
+                        </div>
+                        <h3 onclick="openSongModal('${song.id}')" class="text-lg font-bold text-white hover:text-amber-400 cursor-pointer transition line-clamp-1">${song.title}</h3>
+                        <p class="text-xs text-slate-400 mt-1">${song.artist}</p>
+                        <div class="flex items-center gap-2 mt-3 flex-wrap">
+                            <span class="bg-slate-800 text-slate-300 text-xs px-2 py-0.5 rounded-md">${song.genre}</span>
+                            ${song.era ? `<span class="bg-slate-900 text-slate-400 text-xs px-2 py-0.5 rounded-md border border-slate-800">${song.era}</span>` : ''}
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between pt-3 border-t border-slate-800/80 gap-2">
+                        <button onclick="openSongModal('${song.id}')" class="text-xs text-slate-300 hover:text-amber-400 font-medium transition cursor-pointer">
+                            🔍 ดูรายละเอียด
+                        </button>
+                        <button onclick="toggleSetlist('${song.title}')" class="text-xs font-semibold px-3 py-1.5 rounded-xl transition cursor-pointer ${inSetlist ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 hover:bg-slate-700 text-slate-300'}">
+                            ${inSetlist ? '✓ ใน Setlist' : '+ เพิ่ม'}
+                        </button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function renderTable(songs) {
+            let tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+
+            if (songs.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-slate-500">ไม่พบเพลงที่ตรงกับการค้นหา</td></tr>`;
+                return;
+            }
+
+            songs.forEach(song => {
+                let inSetlist = setlist.includes(song.title);
+                let tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-900/60 transition';
+                tr.innerHTML = `
+                    <td class="p-4 font-semibold text-white cursor-pointer hover:text-amber-400" onclick="openSongModal('${song.id}')">${song.title}</td>
+                    <td class="p-4 text-slate-300 text-xs">${song.artist}</td>
+                    <td class="p-4"><span class="bg-amber-500/10 text-amber-400 text-xs px-2 py-0.5 rounded font-mono">${song.key}</span></td>
+                    <td class="p-4 text-slate-300 text-xs">${song.genre}</td>
+                    <td class="p-4 text-slate-400 text-xs">${song.era || '-'}</td>
+                    <td class="p-4 text-slate-400 text-xs font-mono">${song.tempo || '-'}</td>
+                    <td class="p-4 text-right">
+                        <button onclick="toggleSetlist('${song.title}')" class="text-xs font-semibold px-3 py-1.5 rounded-xl transition cursor-pointer ${inSetlist ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 hover:bg-slate-700 text-slate-300'}">
+                            ${inSetlist ? '✓ ใน Setlist' : '+ เพิ่ม'}
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function toggleSetlistDrawer() {
+            let drawer = document.getElementById('setlistDrawer');
+            drawer.classList.toggle('hidden');
+            updateSetlistUI();
+        }
+
+        function toggleSetlist(songTitle) {
+            let index = setlist.indexOf(songTitle);
+            if (index > -1) {
+                setlist.splice(index, 1);
+            } else {
+                setlist.push(songTitle);
+            }
+            localStorage.setItem('mon_cher_setlist', JSON.stringify(setlist));
+            updateSetlistUI();
+            filterSongs();
+        }
+
+        function updateSetlistUI() {
+            document.getElementById('setlistBadge').textContent = setlist.length;
+            let container = document.getElementById('setlistItemsContainer');
+            container.innerHTML = '';
+
+            if (setlist.length === 0) {
+                container.innerHTML = `<div class="text-center py-12 text-slate-500 text-xs">ยังไม่มีเพลงใน Setlist<br>กดปุ่ม "+ เพิ่ม" ที่การ์ดเพลงได้เลยครับ</div>`;
+                document.getElementById('setlistStats').textContent = '0 เพลง • ประมาณ 0 นาที';
+                return;
+            }
+
+            let totalMinutes = setlist.length * 4;
+            document.getElementById('setlistStats').textContent = `${setlist.length} เพลง • ประมาณ ${totalMinutes} นาที`;
+
+            setlist.forEach((title, idx) => {
+                let songObj = allSongs.find(s => s.title === title) || { artist: '-', key: '-' };
+                let item = document.createElement('div');
+                item.className = 'bg-slate-950/60 border border-slate-800/80 rounded-xl p-3 flex items-center justify-between gap-2';
+                item.innerHTML = `
+                    <div class="flex items-center gap-3 overflow-hidden">
+                        <span class="text-xs text-slate-500 font-mono w-5 text-right">${idx + 1}.</span>
+                        <div class="truncate">
+                            <h4 class="text-xs font-bold text-white truncate">${title}</h4>
+                            <p class="text-[10px] text-slate-400 truncate">${songObj.artist} • <span class="text-amber-400">Key: ${songObj.key}</span></p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-1 shrink-0">
+                        <button onclick="moveSetlist(${idx}, -1)" class="p-1 hover:bg-slate-800 text-slate-400 rounded text-xs transition cursor-pointer" ${idx === 0 ? 'disabled opacity-30' : ''}>▲</button>
+                        <button onclick="moveSetlist(${idx}, 1)" class="p-1 hover:bg-slate-800 text-slate-400 rounded text-xs transition cursor-pointer" ${idx === setlist.length - 1 ? 'disabled opacity-30' : ''}>▼</button>
+                        <button onclick="toggleSetlist('${title}')" class="p-1 hover:bg-rose-500/20 text-rose-400 rounded text-xs transition cursor-pointer ml-1">✕</button>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        function moveSetlist(index, direction) {
+            let newIndex = index + direction;
+            if (newIndex < 0 || newIndex >= setlist.length) return;
+            let temp = setlist[index];
+            setlist[index] = setlist[newIndex];
+            setlist[newIndex] = temp;
+            localStorage.setItem('mon_cher_setlist', JSON.stringify(setlist));
+            updateSetlistUI();
+            filterSongs();
+        }
+
+        function saveSetlistMeta() {
+            setlistTitle = document.getElementById('setlistTitleInput').value;
+            localStorage.setItem('mon_cher_setlist_title', setlistTitle);
+        }
+
+        function clearSetlist() {
+            if (confirm('คุณต้องการล้างเพลงทั้งหมดออกจาก Setlist ใช่หรือไม่?')) {
+                setlist = [];
+                localStorage.setItem('mon_cher_setlist', JSON.stringify(setlist));
+                updateSetlistUI();
+                filterSongs();
+            }
+        }
+
+        function exportSetlist() {
+            let text = `🎵 Setlist: ${setlistTitle}\n`;
+            text += `-----------------------------------\n`;
+            setlist.forEach((title, idx) => {
+                let songObj = allSongs.find(s => s.title === title) || {};
+                text += `${idx + 1}. ${title} (Key: ${songObj.key || '-'}) - ${songObj.artist || '-'}\n`;
+            });
+            text += `-----------------------------------\n`;
+            text += `รวมทั้งสิ้น ${setlist.length} เพลง (ประมาณ ${setlist.length * 4} นาที)`;
+
+            navigator.clipboard.writeText(text).then(() => {
+                alert('คัดลอก Setlist สำหรับแชร์ไปยังคลิปบอร์ดเรียบร้อยแล้วครับ! 📋');
+            });
+        }
+
+        function openSongModal(songId) {
+            let song = allSongs.find(s => s.id === songId);
+            if (!song) return;
+
+            document.getElementById('modalTitle').textContent = song.title;
+            document.getElementById('modalArtist').textContent = song.artist;
+            document.getElementById('modalGenreBadge').textContent = song.genre;
+            document.getElementById('modalKey').textContent = song.key;
+            document.getElementById('modalBpm').textContent = song.tempo || '-';
+            document.getElementById('modalEra').textContent = song.era || '-';
+            document.getElementById('modalLang').textContent = song.language || '-';
+
+            let infoBox = document.getElementById('modalInfoContainer');
+            if (song.info) {
+                infoBox.classList.remove('hidden');
+                document.getElementById('modalInfo').textContent = song.info;
+            } else {
+                infoBox.classList.add('hidden');
+            }
+
+            let chordBtn = document.getElementById('modalChordBtn');
+            if (song.chordsLink && song.chordsLink.startsWith('http')) {
+                chordBtn.href = song.chordsLink;
+                chordBtn.classList.remove('hidden');
+            } else {
+                chordBtn.classList.add('hidden');
+            }
+
+            let setlistBtn = document.getElementById('modalSetlistBtn');
+            let inSetlist = setlist.includes(song.title);
+            setlistBtn.textContent = inSetlist ? '✓ ลบออกจาก Setlist' : '+ เพิ่มเข้า Setlist';
+            setlistBtn.className = `flex-1 font-semibold py-3 px-4 rounded-xl text-sm transition text-center cursor-pointer ${inSetlist ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' : 'bg-amber-500 hover:bg-amber-400 text-slate-950'}`;
+            setlistBtn.onclick = () => {
+                toggleSetlist(song.title);
+                openSongModal(songId);
+            };
+
+            document.getElementById('songModal').classList.remove('hidden');
+        }
+
+        function closeSongModal() {
+            document.getElementById('songModal').classList.add('hidden');
+        }
+
+        function openSettingsModal() {
+            document.getElementById('csvUrlInput').value = currentCsvUrl;
+            document.getElementById('settingsModal').classList.remove('hidden');
+        }
+
+        function closeSettingsModal() {
+            document.getElementById('settingsModal').classList.add('hidden');
+        }
+
+        function saveCsvUrl() {
+            let val = document.getElementById('csvUrlInput').value.trim();
+            if (val) {
+                currentCsvUrl = val;
+                localStorage.setItem('mon_cher_csv_url', currentCsvUrl);
+                closeSettingsModal();
+                fetchSongsData();
+            }
+        }
+    </script>
+</body>
+</html>
